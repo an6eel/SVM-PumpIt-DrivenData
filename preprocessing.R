@@ -14,7 +14,6 @@ library(tidyverse)
 library(caret)
 library(leaflet)
 library(e1071)   
-source("cleaning.R")
 
 dataFile <- read.csv("data/train_cleaned.csv", header = T, row.names = 1)
 
@@ -32,4 +31,6 @@ model <- svm(status_group~., data=datos,
 
 
 x <- predict(model, test)
-table(x)
+test$status_group <- x
+submit <- test %>% select(id, status_group)
+write.csv(submit, file = "data/submit.csv", row.names = F)

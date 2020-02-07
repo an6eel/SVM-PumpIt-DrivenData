@@ -114,7 +114,7 @@ class dataPreprocess:
             series = self.__get_initial_chars(data[feature])
             temp_data = [value if value in self.bins[feature] else "other" for value in series.values]
             data[feature] = temp_data
-            data = self.__bin_feature(data, feature)
+            #data = self.__bin_feature(data, feature)
         return data
 
     def discretize_high_labels_variables(self, data):
