@@ -1,6 +1,8 @@
 import pandas as pd
 from sklearn.preprocessing import LabelBinarizer, Normalizer
 from sklearn.impute import SimpleImputer
+import numpy as np
+
 train_data_types = {
     "id": int,
     "amount_tsh": float,
@@ -71,12 +73,26 @@ class dataPreprocess:
         self.logical_variables = logical_variables
         self.high_labels_variables = discretized_labels
         self.numerical_variables = numerical_variables
+        self.median_values = {}
+        self.frequent_values = {}
 
-    def fit(self, train, num_bins=20, num_chars=4):
+    def fit(self, train, num_bins=35, num_chars=4):
         self.max_bins = num_bins
         self.num_chars = num_chars
         self.__compute_bins(train)
+        self.__learn_missing(train)
         return self
+
+    def __learn_missing(self, train):
+        imputer = SimpleImputer(strategy="most_frequent")
+        imputer.fit(train[self.logical_variables])
+        for variable, value in zip(self.logical_variables, imputer.statistics_):
+            self.frequent_values[variable] = value
+        zero_variables = ["construction_year", "longitude", "latitude"]
+        zero_inputer = SimpleImputer(missing_values=0, strategy="median")
+        zero_inputer.fit(train[zero_variables])
+        for variable, value in zip(zero_variables, zero_inputer.statistics_):
+            self.median_values[variable] = value
 
     def transform(self, data):
         data = self.drop_data(data)
@@ -105,8 +121,12 @@ class dataPreprocess:
         categorical_features = list(data.columns[data.isnull().any()])
         categorical_features = [x for x in categorical_features if x not in logical_variables]
         data[categorical_features] = data[categorical_features].fillna("unknown")
-        imputer = SimpleImputer(strategy="most_frequent")
-        data[logical_variables] = imputer.fit_transform(data[logical_variables])
+        for variable, value in self.frequent_values.items():
+            data[variable] = data[variable].fillna(value)
+        for variable, value in self.median_values.items():
+            df = data[variable].copy()
+            df[df == 0] = value
+            data[variable] = df
         return data
 
     def discretize_text_variables(self, data):
@@ -114,7 +134,6 @@ class dataPreprocess:
             series = self.__get_initial_chars(data[feature])
             temp_data = [value if value in self.bins[feature] else "other" for value in series.values]
             data[feature] = temp_data
-            #data = self.__bin_feature(data, feature)
         return data
 
     def discretize_high_labels_variables(self, data):
