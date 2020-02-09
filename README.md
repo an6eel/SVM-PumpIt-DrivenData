@@ -25,5 +25,11 @@
 
 **SCORE --> 0.7952**
 
+### Best submission
+
+- Changed `max_bins` value to 25 o 30
+
+**SCORE --> 0.7966**
+
 
 
