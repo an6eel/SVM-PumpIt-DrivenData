@@ -25,10 +25,7 @@ test <- tibble::as_tibble(test)
 datos$date_recorded <- as.Date(datos$date_recorded)
 test$date_recorded <- as.Date(test$date_recorded) 
 
-model <- svm(status_group~., data=datos, 
-             method="C-classification", kernel="radial", 
-             gamma=0.1, cost=10)
-
+model <- train(status_group ~ ., data = datos[1:10000,], method = "knn")
 
 x <- predict(model, test)
 test$status_group <- x
