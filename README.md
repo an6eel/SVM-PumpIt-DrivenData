@@ -23,18 +23,20 @@
 
 - Removed binarization for `funder` and `installer` variables.
 
+**SCORE --> 0.7952**
+
 ### Best submission
 
 - Changed `max_bins` value to 25 o 30
 
 **SCORE --> 0.7966**
 
-## Extra preprocessing
+### Extra preprocessing
 
 - Replace invalid data (ex: 0 for `construction_year`) with `median`
 - Apply PCA with `n_components=10-20`
 
-**SCORE --> 0.7952**
+
 
 
 
