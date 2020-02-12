@@ -31,7 +31,7 @@
 
 **SCORE --> 0.7966**
 
-###**SCORE --> 0.7952** Extra preprocessing
+### Extra preprocessing
 
 - Replace invalid data (ex: 0 for `construction_year`) with `median`
 - Apply PCA with `n_components=10-20`
