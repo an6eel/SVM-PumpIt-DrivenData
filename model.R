@@ -15,9 +15,9 @@ library(caret)
 library(leaflet)
 library(e1071)   
 
-dataFile <- read.csv("data/train_cleaned.csv", header = T, row.names = 1)
+dataFile <- read.csv("data/train_pca.csv", header = T)
 
-test <- read.csv("data/test_cleaned.csv", header = T, row.names = 1)
+test <- read.csv("data/test_pca.csv", header = T)
 
 datos <- tibble::as_tibble(dataFile)
 test <- tibble::as_tibble(test)
@@ -31,6 +31,7 @@ model <- svm(status_group~., data=datos,
 
 
 x <- predict(model, test)
+test <- read.csv("data/test.csv", header = T)
 test$status_group <- x
 submit <- test %>% select(id, status_group)
 write.csv(submit, file = "data/submit.csv", row.names = F)

@@ -1,7 +1,8 @@
 import pandas as pd
-from sklearn.preprocessing import LabelBinarizer, Normalizer
+from sklearn.preprocessing import LabelBinarizer, Normalizer, LabelEncoder
 from sklearn.impute import SimpleImputer
-import numpy as np
+from datetime import  datetime
+from sklearn.decomposition import PCA
 
 train_data_types = {
     "id": int,
@@ -61,6 +62,9 @@ discretized_labels = ["subvillage", "lga", "ward", "wpt_name",
                       "basin", "region", "region_code", "district_code", "scheme_name",
                       "extraction_type"]
 
+encoded_labels = [*discretized_labels, "funder", "installer", "permit", "public_meeting", "management",
+                  "payment", "water_quality", "quality_group", "quantity", "source", "source_type", "source_class",
+                  "waterpoint_type"]
 
 
 def read_data(filename):
@@ -75,13 +79,30 @@ class dataPreprocess:
         self.numerical_variables = numerical_variables
         self.median_values = {}
         self.frequent_values = {}
+        self.encoders = {}
+        self.pca = None
 
     def fit(self, train, num_bins=35, num_chars=4):
         self.max_bins = num_bins
         self.num_chars = num_chars
         self.__compute_bins(train)
         self.__learn_missing(train)
+        data = self.drop_data(train)
+        data = self.handle_missing_values(data)
+        data = self.discretize_text_variables(data)
+        data = self.discretize_high_labels_variables(data)
+        data = self.scale_data(data)
+        self.__encode(data)
+        data = self.encode_data(data)
+        self.train_pca(data)
         return self
+
+    def __encode(self, train):
+        for variable in encoded_labels:
+            encoder = LabelEncoder()
+            encoder.fit(train[variable])
+            self.encoders[variable] = encoder
+
 
     def __learn_missing(self, train):
         imputer = SimpleImputer(strategy="most_frequent")
@@ -94,12 +115,30 @@ class dataPreprocess:
         for variable, value in zip(zero_variables, zero_inputer.statistics_):
             self.median_values[variable] = value
 
+    def train_pca(self, data):
+        pca = PCA(n_components=5)
+        pca.fit(data)
+        self.pca = pca
+
+    def apply_pca(self, data):
+        columns = ['pca_%i' % i for i in range(5)]
+        df_pca = pd.DataFrame(self.pca.transform(data), columns=columns, index=data.index)
+        return df_pca
+
     def transform(self, data):
         data = self.drop_data(data)
         data = self.handle_missing_values(data)
         data = self.discretize_text_variables(data)
         data = self.discretize_high_labels_variables(data)
         data = self.scale_data(data)
+        data = self.encode_data(data)
+        return data
+
+    def encode_data(self, data):
+        data["date_recorded"] = data["date_recorded"].transform(
+            func=lambda date: datetime.strptime(date, "%Y-%m-%d").timestamp())
+        for variable in encoded_labels:
+            data[variable] = self.encoders[variable].transform(data[variable])
         return data
 
     def __get_initial_chars(self, feature):
