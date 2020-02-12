@@ -98,6 +98,12 @@ class dataPreprocess:
         return self
 
     def __encode(self, train):
+        """
+        Train an encoder for each of the categorical variables to perform an equivalent
+        transformation for both the training and test dataset.
+        :param train:
+        :return:
+        """
         for variable in encoded_labels:
             encoder = LabelEncoder()
             encoder.fit(train[variable])
@@ -105,6 +111,12 @@ class dataPreprocess:
 
 
     def __learn_missing(self, train):
+        """
+        Fit an imputer for each of the variables that contain missing values to perform
+        a similar imputation for both the training and test set
+        :param train:
+        :return:
+        """
         imputer = SimpleImputer(strategy="most_frequent")
         imputer.fit(train[self.logical_variables])
         for variable, value in zip(self.logical_variables, imputer.statistics_):
@@ -116,25 +128,44 @@ class dataPreprocess:
             self.median_values[variable] = value
 
     def train_pca(self, data):
+        """
+        Fit the PCA to our training data set for later application
+        :param data:
+        :return:
+        """
         pca = PCA(n_components=5)
         pca.fit(data)
         self.pca = pca
 
     def apply_pca(self, data):
+        """
+        Apply PCA to the dataset
+        :param data:
+        :return:
+        """
         columns = ['pca_%i' % i for i in range(5)]
         df_pca = pd.DataFrame(self.pca.transform(data), columns=columns, index=data.index)
         return df_pca
 
     def transform(self, data):
+        """
+        Pre-processing on the data set
+        :param data:
+        :return:
+        """
         data = self.drop_data(data)
         data = self.handle_missing_values(data)
         data = self.discretize_text_variables(data)
         data = self.discretize_high_labels_variables(data)
         data = self.scale_data(data)
-        data = self.encode_data(data)
         return data
 
     def encode_data(self, data):
+        """
+        Encode category variables in order to apply PCA
+        :param data:
+        :return:
+        """
         data["date_recorded"] = data["date_recorded"].transform(
             func=lambda date: datetime.strptime(date, "%Y-%m-%d").timestamp())
         for variable in encoded_labels:
@@ -142,11 +173,22 @@ class dataPreprocess:
         return data
 
     def __get_initial_chars(self, feature):
+        """
+        For each of the values of the established variable, we keep the initial
+        characters and obtain as a result the series of this variable
+        :param feature:
+        :return:
+        """
         feature_data = list(feature)
         chars_data = pd.Series([str(char).lower()[0:self.num_chars] for char in feature_data])
         return chars_data
 
     def __compute_bins(self, data):
+        """
+        For those variables with many labels, we obtain the most frequent labels
+        :param data:
+        :return:
+        """
         dict_features = {}
         for feature in [*self.text_variables, *self.high_labels_variables]:
             chars_data = self.__get_initial_chars(data[feature])
@@ -157,6 +199,12 @@ class dataPreprocess:
         self.bins = dict_features
 
     def handle_missing_values(self, data):
+        """
+        Replace the missing values of category variables with "unknown"
+        Replace the invalid data with the previously calculated mean or most frequent value
+        :param data:
+        :return:
+        """
         categorical_features = list(data.columns[data.isnull().any()])
         categorical_features = [x for x in categorical_features if x not in logical_variables]
         data[categorical_features] = data[categorical_features].fillna("unknown")
@@ -169,6 +217,11 @@ class dataPreprocess:
         return data
 
     def discretize_text_variables(self, data):
+        """
+        Reduce variable labels to those previously calculated in self.bins
+        :param data:
+        :return:
+        """
         for feature in self.text_variables:
             series = self.__get_initial_chars(data[feature])
             temp_data = [value if value in self.bins[feature] else "other" for value in series.values]
@@ -176,6 +229,11 @@ class dataPreprocess:
         return data
 
     def discretize_high_labels_variables(self, data):
+        """
+        Reduce variable labels to those previously calculated in self.bins
+        :param data:
+        :return:
+        """
         for feature in self.high_labels_variables:
             series = self.__get_initial_chars(data[feature])
             temp_data = [value if value in self.bins[feature] else "other" for value in series.values]
@@ -183,6 +241,12 @@ class dataPreprocess:
         return data
 
     def __bin_feature(self, data, feature):
+        """
+        Apply One Hot Encoder to the selected variable
+        :param data:
+        :param feature:
+        :return:
+        """
         labelmodel = LabelBinarizer()
         bins = labelmodel.fit_transform(data[feature])
         classes = ["{}-{}".format(feature, clas) for clas in labelmodel.classes_]
@@ -193,9 +257,19 @@ class dataPreprocess:
         return data
 
     def drop_data(self, data):
+        """
+        Remove unused variables
+        :param data:
+        :return:
+        """
         data = data.drop(drop_variables, axis=1)
         return data
 
     def scale_data(self, data):
+        """
+        Normalize numerical variables
+        :param data:
+        :return:
+        """
         data[self.numerical_variables] = Normalizer().fit_transform(data[self.numerical_variables])
         return data
